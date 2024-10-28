@@ -8,11 +8,11 @@ import 'package:traffic_watcher/core/secrets/app_secrets.dart';
 import 'package:traffic_watcher/features/video/data/model/video_model.dart';
 import '../../domain/repository/video_repository.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
-
+import '../../../auth/data/model/user.dart' as signedInUser;
 
 class VideoRepositoryImpl implements VideoRepository {
   @override
-  Future<Either<Failure, File>> uploadVideo(VideoModel videoModel) async {
+  Future<Either<Failure, File>> uploadVideo(VideoModel videoModel, signedInUser.User user) async {
     try {
       var credentials = json.decode(AppSecrests.serviceAccountCredentials);
       var accountCredentials = ServiceAccountCredentials.fromJson(credentials);
@@ -22,7 +22,7 @@ class VideoRepositoryImpl implements VideoRepository {
       var media = drive.Media(io.File(videoModel.videoPath).openRead(),
           io.File(videoModel.videoPath).lengthSync());
       var driveFile = drive.File()
-        ..name = "${videoModel.location}.mp4"
+        ..name = "${user.name}-${videoModel.location}.mp4"
         ..parents = [AppSecrests.driveFolderId];
       File responseFile = await driveApi.files.create(
         driveFile, uploadMedia: media,

@@ -3,11 +3,15 @@ import 'dart:io';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:traffic_watcher/features/auth/presentation/bloc/auth_state.dart';
 import 'package:video_player/video_player.dart';
 import 'package:traffic_watcher/features/video/presentation/bloc/video_bloc.dart';
 import 'package:traffic_watcher/features/video/presentation/bloc/video_event.dart';
 import 'package:traffic_watcher/features/video/presentation/bloc/video_state.dart';
 import 'package:traffic_watcher/features/video/data/model/video_model.dart';
+
+import '../../../../core/dialogue/loading_screen.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 class UploadScreen extends StatefulWidget {
   final String videoPath;
@@ -40,37 +44,6 @@ class _UploadScreenState extends State<UploadScreen> {
     });
   }
 
-  void _showProgressDialog(BuildContext context) {
-    _overlayEntry = OverlayEntry(
-      builder: (context) => Material(
-        color: Colors.black54,
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 20),
-                Text('Uploading...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    Overlay.of(context).insert(_overlayEntry!);
-  }
-
-  void _hideProgressDialog() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-  }
-
   @override
   void dispose() {
     _videoPlayerController.dispose();
@@ -81,93 +54,109 @@ class _UploadScreenState extends State<UploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: BlocConsumer<VideoBloc, VideoState>(
-        listener: (context, state) {
-          if (state is VideoUploaded) {
-            _hideProgressDialog();
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(
-                    content: Text('${state.file.name} Uploaded successfully!')),
-              );
-            Navigator.pop(context);
-          } else if (state is VideoError) {
-            _hideProgressDialog();
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
-          } else if (state is VideoLoading) {
-            _showProgressDialog(context);
-          }
-        },
-        builder: (context, state) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0)
-                .copyWith(bottom: 8.0),
-            child: _videoPlayerController.value.isInitialized
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Form(
-                        key: _formKey,
-                        child: TextFormField(
-                          controller: _locationController,
-                          keyboardType: TextInputType.text,
-                          decoration: const InputDecoration(
-                            labelText: 'Enter Location',
-                            border: OutlineInputBorder(),
+    return WillPopScope(
+      onWillPop: () async {
+        final videoState = context.read<VideoBloc>().state;
+        if (videoState is VideoLoading || videoState is VideoCompressing) {
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(),
+        body: BlocConsumer<VideoBloc, VideoState>(
+          listener: (context, state) {
+            if (state is VideoUploaded) {
+              LoadingScreen.instance.hide();
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                      content: Text('${state.file.name} Uploaded successfully!')),
+                );
+              Navigator.pop(context);
+            } else if (state is VideoError) {
+              LoadingScreen.instance.hide();
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(content: Text(state.message)),
+                );
+            } else if (state is VideoLoading) {
+              LoadingScreen.instance.show(context: context , text: 'Uploading ...');
+            }else if (state is VideoCompressing) {
+              LoadingScreen.instance.show(context: context, text: 'Compressing ...');
+            }
+          },
+          builder: (context, state) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0)
+                  .copyWith(bottom: 8.0),
+              child: _videoPlayerController.value.isInitialized
+                  ? SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Form(
+                            key: _formKey,
+                            child: TextFormField(
+                              controller: _locationController,
+                              keyboardType: TextInputType.text,
+                              textInputAction: TextInputAction.done,
+                              decoration: const InputDecoration(
+                                labelText: 'Enter Location',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter a location';
+                                }
+                                return null;
+                              },
+                            ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter a location';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      AspectRatio(
-                        aspectRatio: _videoPlayerController.value.aspectRatio,
-                        child: Chewie(controller: _chewieController),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            _chewieController.pause();
-                            final videoModel = VideoModel(
-                              videoPath: widget.videoPath,
-                              location: _locationController.text,
-                            );
-                            context
-                                .read<VideoBloc>()
-                                .add(UploadVideo(videoModel));
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          fixedSize:
-                              Size(MediaQuery.sizeOf(context).width / 2, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
+                          const SizedBox(height: 20),
+                          AspectRatio(
+                            aspectRatio: _videoPlayerController.value.aspectRatio,
+                            child: Chewie(controller: _chewieController),
                           ),
-                        ),
-                        child: const Text(
-                          "Upload",
-                          style: TextStyle(color: Colors.white, fontSize: 20),
-                        ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (_formKey.currentState!.validate()) {
+                                FocusScope.of(context).unfocus();
+                                _chewieController.pause();
+                                final videoModel = VideoModel(
+                                  videoPath: widget.videoPath,
+                                  location: _locationController.text,
+                                );
+                                context.read<VideoBloc>().add(CompressVideo(videoModel , (context.read<AuthBloc>().state as Authenticated).user));
+
+
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              fixedSize:
+                                  Size(MediaQuery.sizeOf(context).width / 2, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                            ),
+                            child: const Text(
+                              "Upload",
+                              style: TextStyle(color: Colors.white, fontSize: 20),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
                   )
-                : const Center(child: CircularProgressIndicator()),
-          );
-        },
+                  : const Center(child: CircularProgressIndicator()),
+            );
+          },
+        ),
       ),
     );
   }

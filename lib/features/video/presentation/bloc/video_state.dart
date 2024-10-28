@@ -27,6 +27,7 @@ class VideoError extends VideoState {
   List<Object> get props => [message];
 }
 
+
 class VideoUploaded extends VideoState {
   final File file;
   const VideoUploaded(this.file);
@@ -34,3 +35,4 @@ class VideoUploaded extends VideoState {
   @override
   List<Object> get props => [file];
 }
+class VideoCompressing extends VideoState {}

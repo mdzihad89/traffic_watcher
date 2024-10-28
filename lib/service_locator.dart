@@ -3,6 +3,7 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:traffic_watcher/features/video/domain/repository/video_repository.dart';
 import 'package:traffic_watcher/features/video/presentation/bloc/video_bloc.dart';
+import 'core/dialogue/loading_screen.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repository/auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -19,4 +20,6 @@ Future<void> setup() async {
   getIt.registerLazySingleton<VideoRepository>(() => VideoRepositoryImpl());
   getIt.registerFactory<AuthBloc>(() => AuthBloc(getIt<AuthRepository>()));
   getIt.registerFactory<VideoBloc>(() => VideoBloc(getIt<VideoRepository>()));
+  getIt.registerLazySingleton<LoadingScreen>(() => LoadingScreen());
+
 }

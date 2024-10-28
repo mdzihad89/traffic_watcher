@@ -49,6 +49,7 @@ dependencies:
   googleapis:
   googleapis_auth:
   http:
+  video_compress:
 
 dev_dependencies:
   flutter_test:
