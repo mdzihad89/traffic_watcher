@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:traffic_watcher/features/video/presentation/screen/upload_screen.dart';
+import 'package:video_compress/video_compress.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -69,7 +70,8 @@ class HomeScreen extends StatelessWidget {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
                         onTap: () async {
-                          context.read<VideoBloc>().add(const PickVideo(fromCamera: false));
+                           context.read<VideoBloc>().add(const PickVideo(fromCamera: false));
+
                         },
                         child: Container(
                           margin: const EdgeInsets.all(20),

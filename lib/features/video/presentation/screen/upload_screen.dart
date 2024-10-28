@@ -4,6 +4,7 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:traffic_watcher/features/auth/presentation/bloc/auth_state.dart';
+import 'package:video_compress/video_compress.dart';
 import 'package:video_player/video_player.dart';
 import 'package:traffic_watcher/features/video/presentation/bloc/video_bloc.dart';
 import 'package:traffic_watcher/features/video/presentation/bloc/video_event.dart';
@@ -27,7 +28,6 @@ class _UploadScreenState extends State<UploadScreen> {
   late ChewieController _chewieController;
   TextEditingController _locationController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  OverlayEntry? _overlayEntry;
 
   @override
   void initState() {
@@ -48,7 +48,6 @@ class _UploadScreenState extends State<UploadScreen> {
   void dispose() {
     _videoPlayerController.dispose();
     _chewieController.dispose();
-    _overlayEntry?.remove();
     super.dispose();
   }
 
@@ -65,7 +64,7 @@ class _UploadScreenState extends State<UploadScreen> {
       child: Scaffold(
         appBar: AppBar(),
         body: BlocConsumer<VideoBloc, VideoState>(
-          listener: (context, state) {
+          listener: (context, state) async{
             if (state is VideoUploaded) {
               LoadingScreen.instance.hide();
               ScaffoldMessenger.of(context)
@@ -74,7 +73,8 @@ class _UploadScreenState extends State<UploadScreen> {
                   SnackBar(
                       content: Text('${state.file.name} Uploaded successfully!')),
                 );
-              Navigator.pop(context);
+                Navigator.pop(context);
+
             } else if (state is VideoError) {
               LoadingScreen.instance.hide();
               ScaffoldMessenger.of(context)
@@ -124,7 +124,7 @@ class _UploadScreenState extends State<UploadScreen> {
                           ),
                           const SizedBox(height: 20),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (_formKey.currentState!.validate()) {
                                 FocusScope.of(context).unfocus();
                                 _chewieController.pause();
